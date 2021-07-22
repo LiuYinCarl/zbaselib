@@ -1,12 +1,17 @@
 #pragma once
 
-#include <assert.h>
+//#include <assert.h>
 #include <stdlib.h>
-#include <unistd.h>
 #include <fcntl.h>
 #include <errno.h>
 #include <stdio.h>
 #include <string.h>
+
+#ifdef WIN32
+#include <windows.h>
+#else
+#include <unistd.h>
+#endif
 
 #define PROCESS_LOCK_BUF_SIZE 16
 #ifndef ERR_EXIT
@@ -25,7 +30,7 @@ class ProcessLock {
 
  private:
   #ifdef WIN32
-    HANDLE handle;
+    HANDLE handler;
   #else
     int fd;
   #endif
@@ -34,44 +39,44 @@ class ProcessLock {
 
 #ifdef WIN32
 ProcessLock::ProcessLock() {
-  hLockFile = INVALID_HANDLE_VALUE;  
+  handler = INVALID_HANDLE_VALUE;  
 }
 
 bool ProcessLock::CreateLock(const char* filename) {
   bool result = false;
   
-  handle = CreateFile(filename, GENERIC_READ, FILE_SHARE_READ, 0, OPEN_ALWAYS, 0, 0);
-  if (handle == INVALID_HANDLE_VALUE)
+  handler = CreateFile(filename, GENERIC_READ, FILE_SHARE_READ, 0, OPEN_ALWAYS, 0, 0);
+  if (handler == INVALID_HANDLE_VALUE)
     goto exit;
 
-  if (!LockFile(handle, 0, 0, 1, 0)) {
+  if (!LockFile(handler, 0, 0, 1, 0)) {
     printf("CreateLock() failed. there are another process.");
     goto exit;
   }
 
   result = true;
 exit:
-  if (!result && handle != INVALID_HANDLE_VALUE) {
-    if (CloseHandle(handle))
+  if (!result && handler != INVALID_HANDLE_VALUE) {
+    if (CloseHandle(handler))
       printf("CreateLock() failed. CloseHandle() failed\n");
 
-    handle = INVALID_HANDLE_VALUE;
+	handler = INVALID_HANDLE_VALUE;
   }
   
   return result;
 } 
 
 void ProcessLock::FreeLock() {
-  if (handle == INVALID_HANDLE_VALUE)
+  if (handler == INVALID_HANDLE_VALUE)
     ERR_EXIT("FreeLock() failed. handle == INVALID_HANDLE_VALUE");
 
-  if (!UnlockFile(handle, 0, 0, 1, 0))
+  if (!UnlockFile(handler, 0, 0, 1, 0))
     ERR_EXIT("FreeLock() failed. UnlockFile() failed");
 
-  CloseHandle(handle))
+  CloseHandle(handler);
     ERR_EXIT("FreeLock() failed. CloseHandle() failed");
 
-  handle = INVALID_HANDLE_VALUE;
+	handler = INVALID_HANDLE_VALUE;
 }
 
 #else // Linux OS
