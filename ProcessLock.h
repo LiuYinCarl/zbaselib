@@ -142,12 +142,12 @@ void ProcessLock::FreeLock() {
     exit(1);
   }
   
-  if (close(nLockFile) == -1) {
+  if (close(fd) == -1) {
     ERR_EXIT("FreeLock() failed. close() failed");
     exit(1);
   }
 
-  nLockFile = -1;
+  fd = -1;
 }
 
 #endif // ifdef WIN32
