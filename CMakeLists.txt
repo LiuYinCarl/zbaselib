@@ -6,5 +6,5 @@ set(CMAKE_CXX_STANDARD 11)
 
 include_directories(./Include)
 
-add_executable(zbaselib test/testPRocessLock.cpp)
+add_executable(zbaselib test/testProcessLock.cpp)
 
