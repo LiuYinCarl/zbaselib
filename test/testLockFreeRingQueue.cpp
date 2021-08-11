@@ -16,7 +16,7 @@ void push_func(LockFreeRingQueue<int>& lf_queue) {
   for (int i = 0; i < push_num; i++) {
     // make sure we can push success finally
     while (lf_queue.Push(42) == false) {}
-    //std::this_thread::sleep_for(std::chrono::milliseconds(1));
+    std::this_thread::sleep_for(std::chrono::milliseconds(1));
   }
 }
 
@@ -25,7 +25,7 @@ void pop_func(LockFreeRingQueue<int>& lf_queue) {
     int tmp;
     // make sure we can pop success finally
     while (lf_queue.Pop(&tmp) == false) {}
-    //std::this_thread::sleep_for(std::chrono::milliseconds(1));
+    std::this_thread::sleep_for(std::chrono::milliseconds(1));
   }
 }
 

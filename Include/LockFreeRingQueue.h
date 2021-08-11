@@ -1,6 +1,7 @@
 #pragma once
 
 #include <assert.h>
+#include <runetype.h>
 #include <stddef.h>
 #include <atomic>
 #include <exception>
@@ -28,6 +29,9 @@ public:
     delete []ring_queue;
     ring_queue = nullptr;
   }
+
+  LockFreeRingQueue(const LockFreeRingQueue&) = delete;
+  LockFreeRingQueue& operator=(const LockFreeRingQueue&) = delete; 
 
   
   THREAD_SAFE size_t GetCap() const {
