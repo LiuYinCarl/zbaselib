@@ -45,7 +45,7 @@ ProcessLock::ProcessLock() {
 bool ProcessLock::CreateLock(const char* filename) {
   bool result = false;
   
-x  handler = CreateFile(filename, GENERIC_READ, FILE_SHARE_READ, 0, OPEN_ALWAYS, 0, 0);
+  handler = CreateFile(filename, GENERIC_READ, FILE_SHARE_READ, 0, OPEN_ALWAYS, 0, 0);
   if (handler == INVALID_HANDLE_VALUE)
     goto exit;
 
