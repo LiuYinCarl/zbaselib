@@ -16,3 +16,11 @@ base library for C/C++
 ## LockFreeRingQueue.h
 
 使用 C++11 编写的，跨平台的无锁环形队列实现。
+
+
+## Channel.h
+
+> 开发中
+
+模拟 Go 的 Channel 实现，参考[ChannelsCPP](https://github.com/Balnian/ChannelsCPP)。  
+使用了无锁队列来实现 Channel Buffer。

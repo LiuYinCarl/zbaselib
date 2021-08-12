@@ -1,7 +1,9 @@
+// This is a C++ Channel Impliement
+// Part of Code from https://github.com/Balnian/ChannelsCPP
+
 #pragma once
 
 #include <assert.h>
-#include <runetype.h>
 #include <stddef.h>
 #include <atomic>
 #include <exception>
