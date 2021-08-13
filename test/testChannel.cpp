@@ -19,37 +19,33 @@ void testLockFreeCircularBuffer() {
 void fibonacci()
 {
   Chan<int> ch;
-  Chan<int> quit;
+  Chan<bool> quit;
 
   std::thread([&]() {
     for (size_t i = 0; i < 10; i++) {
       //std::this_thread::sleep_for(std::chrono::milliseconds(50));
       std::cout << ch << std::endl;
     }
-    std::this_thread::sleep_for(std::chrono::milliseconds(1000));
     // send quit signal
-    quit << 0;
+    quit << false;
     std::cout << "-> quit send" << std::endl;
   }).detach();
 
-
   int x = 0, y = 1;
-  int quit_flag = 0;
-  for (bool break_ = false; !break_; ) {
+  for (bool go = true; go; ) {
     std::cout << "select\n";
     Select {
       Case { ch << x, [&]() {
-	std::cout << "<- ch send: " << x << std::endl;
-	int t = x;
-	x = y;
-	y += t;
+	      int t = x;
+	      x = y;
+	      y += t;
       }},
-	Case { quit, [&](auto v) {
-	  std::cout << "<- quit recv" << std::endl; 
-	  break_ = true;
+	    Case { quit, [&](auto v) {
+	      std::cout << "<- quit recv" << std::endl; 
+	      go = false;
       }}
     };
-    std::cout << "select end\n";
+    std::cout << "-------------------select end\n";
   }
   std::cout << "break!!" << std::endl;
 }
