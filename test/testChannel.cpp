@@ -27,15 +27,18 @@ void fibonacci()
       std::cout << ch << std::endl;
     }
     // send quit signal
-    quit << false;
+    quit << true;
     std::cout << "-> quit send" << std::endl;
   }).detach();
 
-  int x = 0, y = 1;
+  //  std::this_thread::sleep_for(std::chrono::seconds(20));
+
+  int x = 3, y = 4;
   for (bool go = true; go; ) {
-    std::cout << "select\n";
+    std::cout << "<<<<<select" << std::endl;
     Select {
       Case { ch << x, [&]() {
+	      std::cout << "execute-----" << std::endl;
 	      int t = x;
 	      x = y;
 	      y += t;

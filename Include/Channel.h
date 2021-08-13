@@ -15,7 +15,7 @@
 // debug
 #include <chrono>
 
-#define ZBASELIB_DEBUG
+//#define ZBASELIB_DEBUG
 
 
 namespace zbaselib {
@@ -75,6 +75,7 @@ public:
   }
 
   bool Push(T value) {
+    std::cout << "Push: " << value << std::endl;
     while (true) {
       uint64_t old_pos = 0;
       uint64_t new_pos = 0;
@@ -122,6 +123,7 @@ public:
   }
 
   bool Pop(T* ret_value) {
+    std::cout << "Pop" << std::endl;
     while (true) {
       uint64_t old_pos = 0;
       uint64_t new_pos = 0;
@@ -184,23 +186,28 @@ public:
 
   // blocked
   T GetNextValue() {
+    std::cout << "GetNextValue" << std::endl;
     std::unique_lock<std::mutex> ulock(buffer_lock);
     // must return a vaild value or wait forever
     while (true) {
+      std::cout << "GetNextValue while" << std::endl;
       if (is_closed)
-	return {};
+	      return {};
 
       if (buffer.IsEmpty()) {
-	writer_waiter.notify_one();
-	reader_waiter.wait(ulock, [&]() { return !buffer.IsEmpty() || is_closed; });
+	      writer_waiter.notify_one();
+	      reader_waiter.wait(ulock, [&]() { return !buffer.IsEmpty() || is_closed; });
       }
+
+      if (is_closed)
+	      return {};
 
       T value;
       bool get_value_succeed = buffer.Pop(&value);
       if (!get_value_succeed)
 	continue;
       writer_waiter.notify_one();
-      return std::move(value);      
+      return value;  
     }
   }
 
@@ -219,36 +226,53 @@ public:
     bool get_value_succeed = buffer.Pop(&value);
     if (get_value_succeed) {
       writer_waiter.notify_one();
-      return std::make_unique<T>(std::move(value));
+      return std::move(std::make_unique<T>(value));
     } else
       return std::make_unique<T>(T{});
   }
 
   // blocked
   void InsertValue(T value) {
+    std::cout << "InsertValue: " << value << std::endl;
     std::unique_lock<std::mutex> ulock(buffer_lock);
     // must insert the value or wait forever
     while (true) {
+      std::cout << "InsertValue while" << std::endl;
       if (is_closed)
-	return;
+	      return;
       
       if (buffer.IsFull()) {
-	reader_waiter.notify_one();
-	writer_waiter.wait(ulock, [&]() { return !buffer.IsFull() || is_closed; });
+	      reader_waiter.notify_one();
+	      writer_waiter.wait(ulock, [&]() { return !buffer.IsFull() || is_closed; });
       }
+
+      if (is_closed)
+        return;
 
       bool insert_value_succeed = buffer.Push(value);
       if (!insert_value_succeed)
-	continue;
+	      continue;
       reader_waiter.notify_one();
     }
   }
 
   // nonblocked
   bool TryInsertValue(T value) {
+    std::cout << "TryInsert: " << value << std::endl;
     if (is_closed)
       return false;
-    return buffer.Push(value);
+
+    if (buffer.IsFull() && !is_closed) {
+      reader_waiter.notify_one();
+      return false;
+    }
+
+    bool is_insert_succeed = buffer.Push(value);
+    if (is_insert_succeed) {
+      reader_waiter.notify_one();
+      return true;
+    } else
+      return false;
   }
 
   // fixme: change is_closed to atomic_bool
@@ -284,6 +308,7 @@ class Case {
 public:
   template<typename T, size_t buffer_size, typename FUNC>
   Case(IChan<T, buffer_size> ch, FUNC f) {
+    std::cout << "Case cons(IChan)" << std::endl;
     task = [=]() {
       std::cout << "Case IChan" << std::endl;
       auto value_ptr = ch.buffer->TryGetNextValue();
@@ -296,6 +321,7 @@ public:
 
   template<typename T, size_t buffer_size, typename FUNC>
   Case(OChan<T, buffer_size> ch, FUNC f) {
+    std::cout << "Case cons(OChan)" << std::endl;
     task = [=]() {
       std::cout << "Case OChan" << std::endl;
       f();
@@ -310,15 +336,17 @@ public:
   }
 
   Case(const Case&) = default;
-
+  
   Case() {
-    std::cout << "Case ()" << std::endl;
+    std::cout << "Case cons()" << std::endl;
     task = []() {
+      std::cout << "Case() task" << std::endl;
       return true;
     };
   }
   
   bool operator() () {
+    std::cout << "Case operator()" << std::endl;
     return task();
   }
   
@@ -331,10 +359,12 @@ class Default {
 public:
   template<typename FUNC>
   Default(FUNC f) {
+    std::cout << "Default()" << std::endl;
     task = f;
   }
 
   void operator() () {
+    std::cout << "Default operator()" << std::endl;
     task();
   }
 
@@ -351,10 +381,8 @@ public:
     cases.reserve(sizeof...(params));
     Execute(std::forward<T>(params)...);
   }
-  
-private:
-  std::vector<Case> cases;
 
+private:
   bool RandomExecute() {
     std::cout << "RandomExecute" << std::endl;
     std::random_device rd;
@@ -380,6 +408,7 @@ private:
   }
 
   void Execute(Default&& defaul) {
+    std::cout << "Execute Default" << std::endl;
     if (!RandomExecute())
       defaul();
   }
@@ -388,6 +417,9 @@ private:
   void Execute(Default&& defaul, T&&... params) {
     static_assert(internal::dependent_false<T...>, "There should be only atmost 1 Default case which must be the last paramter of the Select");
   }
+
+private:
+  std::vector<Case> cases;
 };
 
 
@@ -403,44 +435,44 @@ Chan<T, buffer_size>&& make_Chan() {
 }
 
 
-// template<typename T, size_t buffer_size = 0>
-// class IChan_Iterator : public std::iterator<std::input_iterator_tag, T> {
-// public:
-//   IChan_Iterator(std::shared_ptr<internal::ChannelBuffer<T, buffer_size>> buff, bool is_end = false) :
-//     buffer(buff) {
-//     if (!is_end) operator++();
-//   }
+template<typename T, size_t buffer_size = 0>
+class IChan_Iterator : public std::iterator<std::input_iterator_tag, T> {
+public:
+  IChan_Iterator(std::shared_ptr<internal::ChannelBuffer<T, buffer_size>> buff, bool is_end = false) :
+    buffer(buff) {
+    if (!is_end) operator++();
+  }
 
-//   IChan_Iterator(const IChan_Iterator&) = default;
+  IChan_Iterator(const IChan_Iterator&) = default;
 
-//   T& operator*() {
-//     return value;
-//   }
+  T& operator*() {
+    return value;
+  }
 
-//   IChan_Iterator& operator++() {
-//     value = buffer->GetNextValue();
-//     return *this;
-//   }
+  IChan_Iterator& operator++() {
+    value = buffer->GetNextValue();
+    return *this;
+  }
 
-//   IChan_Iterator operator++(int) {
-//     IChan_Iterator temp_iter(*this);
-//     operator++();
-//     return temp_iter;
-//   }
+  IChan_Iterator operator++(int) {
+    IChan_Iterator temp_iter(*this);
+    operator++();
+    return temp_iter;
+  }
 
-//   inline bool operator==(const IChan_Iterator& rhs) const {
-//     return buffer->IsClosed();
-//   }
+  inline bool operator==(const IChan_Iterator& rhs) const {
+    return buffer->IsClosed();
+  }
 
-//   inline bool operator!=(const IChan_Iterator& rhs) const {
-//     return !operator==(rhs);
-//   }
+  inline bool operator!=(const IChan_Iterator& rhs) const {
+    return !operator==(rhs);
+  }
 
   
-// private:
-//   std::shared_ptr<internal::ChannelBuffer<T, buffer_size>> buffer;
-//   T value;
-// };
+private:
+  std::shared_ptr<internal::ChannelBuffer<T, buffer_size>> buffer;
+  T value;
+};
 
 
 template<typename T, size_t buffer_size>
@@ -459,9 +491,9 @@ public:
   IChan(const IChan<T, buffer_size>& ch) = default;
 
   // todo: this function is right?
-  // IChan(IChan<T, buffer_size>&& ch) {
-  //   std::swap(buffer, ch.buffer);
-  // }
+  IChan(IChan<T, buffer_size>&& ch) {
+    std::swap(buffer, ch.buffer);
+  }
 
   friend IChan<T, buffer_size>& operator>> (IChan<T, buffer_size>& ch, T& obj) {
     std::cout << "Chan >> obj" << std::endl;
@@ -501,16 +533,16 @@ public:
     return is;
   }
 
-  // using IChan_EndIterator = IChan_Iterator<T, buffer_size>;
+  using IChan_EndIterator = IChan_Iterator<T, buffer_size>;
 
   // todo: is this right
-  // IChan_Iterator<T, buffer_size> begin() {
-  //   return IChan_Iterator<T, buffer_size> { buffer };
-  // }
+  IChan_Iterator<T, buffer_size> begin() {
+    return IChan_Iterator<T, buffer_size> { buffer };
+  }
 
-  // IChan_EndIterator end() {
-  //   return { buffer, true };
-  // }
+  IChan_EndIterator end() {
+    return { buffer, true };
+  }
 };  
 
 
