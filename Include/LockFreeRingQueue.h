@@ -1,6 +1,3 @@
-// This is a C++ Channel Impliement
-// Part of Code from https://github.com/Balnian/ChannelsCPP
-
 #pragma once
 
 #include <assert.h>
@@ -140,12 +137,14 @@ public:
     return true;
   }
 
+  // todo: not a good Pop() impliemention, because we don't konw the return
+  // T object is frome queue or  Pop(), maybe we can return a  unique_ptr?
   // THREAD_SAFE T Pop() {
-  //   T* ret_value = nullptr;
-  //   bool is_pop_succeed = Pop(ret_value);
+  //   T ret_value;
+  //   bool is_pop_succeed = Pop(&ret_value);
   //   if (is_pop_succeed)
-  //     return *ret_value;
-  //   return nullptr;
+  //     return ret_value;
+  //   return T{};
   // }
 
 
