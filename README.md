@@ -25,7 +25,7 @@ base library for C/C++
 模拟 Go 的 Channel 实现，参考[ChannelsCPP](https://github.com/Balnian/ChannelsCPP)。  
 使用了无锁队列来实现 Channel Buffer。
 
-## zos
+## zco
 
 来来源于云风的协程库 https://github.com/cloudwu/coroutine/
 进行了注释和少量修改
